@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Focus Compass</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#5b3a9e" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18171c" media="(prefers-color-scheme: dark)">
+
+<!-- iOS install -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Focus">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf9f7;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b6b66;
+    --text-faint: #a0a09a;
+    --border: rgba(60,40,90,0.08);
+    --border-strong: rgba(60,40,90,0.22);
+    --danger-bg: #fbeaee;
+    --danger-border: #efbac4;
+    --danger-text: #9c2a3a;
+    --warning-bg: #faedd6;
+    --warning-border: #efd09b;
+    --warning-text: #7a4b08;
+    --info-text: #5b3a9e;
+    --info-bg: #f0ebf9;
+    --success-bg: #e3f2ec;
+    --success-border: #a3d8c2;
+    --success-text: #0d624a;
+    --secondary-bg: #f3f0ea;
+    --accent: #5b3a9e;
+    --accent-soft: #f0ebf9;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --priority-high: #c93a4f;
+    --priority-medium: #d68a1f;
+    --priority-low: #6fa53c;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #18171c; --surface: #232128; --text: #f0eee6;
+      --text-muted: #a8a69e; --text-faint: #6b6964;
+      --border: rgba(200,180,255,0.1); --border-strong: rgba(200,180,255,0.25);
+      --danger-bg: #3a1822; --danger-border: #5a2434; --danger-text: #f095a4;
+      --warning-bg: #3a2810; --warning-border: #5a3d18; --warning-text: #fac775;
+      --info-text: #a896d8; --info-bg: #2a2238;
+      --success-bg: #0f3025; --success-border: #1d5a45; --success-text: #5dcaa5;
+      --secondary-bg: #2a2830;
+      --accent: #a896d8; --accent-soft: #2a2238;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: var(--font-sans); background: var(--bg); color: var(--text); margin: 0; padding: 1.5rem; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 12px; }
+  .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .compass-icon { width: 32px; height: 32px; flex-shrink: 0; color: var(--accent); }
+  .header-text { min-width: 0; }
+  .title-row { display: flex; align-items: baseline; gap: 8px; }
+  h1 { font-size: 18px; font-weight: 600; margin: 0; color: var(--text); letter-spacing: -0.01em; }
+  .greeting { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .status { font-size: 12px; color: var(--text-faint); transition: color 0.2s; }
+  .status.syncing { color: var(--info-text); }
+  .status.error { color: var(--danger-text); }
+  .status.synced { color: var(--success-text); }
+  .online-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--success-text); margin-right: 2px;
+    transition: background-color 0.2s;
+  }
+  .online-dot.offline { background: var(--text-faint); }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 0.75rem; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 1rem; align-items: center; }
+  .filter-bar input { flex: 1; height: 32px; font-size: 13px; }
+  .filter-bar button { height: 32px; font-size: 12px; padding: 0 10px; }
+  .shortcut-hint { font-size: 11px; color: var(--text-faint); margin-left: auto; white-space: nowrap; }
+  kbd { display: inline-block; padding: 1px 5px; background: var(--secondary-bg); border: 0.5px solid var(--border-strong); border-radius: 4px; font-family: var(--font-sans); font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+  .task.hidden { display: none; }
+  .empty-state { font-size: 12px; color: var(--text-faint); font-style: italic; padding: 8px; text-align: center; }
+  .empty-state.celebrate { color: var(--success-text); font-style: normal; }
+  input[type="text"], input[type="date"], select, textarea { padding: 0 12px; font-size: 14px; font-family: inherit; background: var(--surface); color: var(--text); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); outline: none; }
+  input[type="text"], input[type="date"], select { height: 36px; }
+  textarea { padding: 8px 12px; resize: vertical; min-height: 60px; width: 100%; }
+  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 2px rgba(80,120,200,0.3); }
+  .toolbar input[type="text"] { flex: 1; }
+  .toolbar select { width: 160px; }
+  button { height: 36px; padding: 0 14px; font-size: 14px; font-family: inherit; background: transparent; color: var(--text); border: 0.5px solid var(--border-strong); border-radius: var(--radius-md); cursor: pointer; transition: background 0.15s; }
+  button:hover { background: var(--secondary-bg); }
+  button:active { transform: scale(0.98); }
+  button.primary { background: var(--info-text); color: white; border-color: var(--info-text); }
+  button.primary:hover { background: var(--info-text); opacity: 0.9; }
+  button.danger { color: var(--danger-text); border-color: var(--danger-border); }
+  button.danger:hover { background: var(--danger-bg); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .quadrant { border-radius: var(--radius-lg); padding: 14px; min-height: 200px; border: 0.5px solid var(--border); }
+  .q-do { background: var(--danger-bg); border-color: var(--danger-border); }
+  .q-schedule { background: var(--surface); }
+  .q-delegate { background: var(--warning-bg); border-color: var(--warning-border); }
+  .q-drop { background: var(--secondary-bg); }
+  .q-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .q-title { font-size: 14px; font-weight: 500; }
+  .q-sub { font-size: 11px; opacity: 0.75; margin-left: 6px; }
+  .q-do .q-title, .q-do .q-sub, .q-do .count { color: var(--danger-text); }
+  .q-schedule .q-title { color: var(--info-text); }
+  .q-schedule .q-sub, .q-schedule .count { color: var(--text-faint); }
+  .q-delegate .q-title, .q-delegate .q-sub, .q-delegate .count { color: var(--warning-text); }
+  .q-drop .q-title, .q-drop .q-sub, .q-drop .count { color: var(--text-muted); }
+  .count { font-size: 12px; }
+
+  .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; min-height: 140px; }
+  .task { display: flex; align-items: flex-start; gap: 6px; padding: 8px; background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-md); font-size: 13px; cursor: grab; user-select: none; transition: opacity 0.2s, border-color 0.15s; }
+  .task:hover { border-color: var(--border-strong); }
+  .task[draggable="true"]:active { cursor: grabbing; }
+  .task[draggable="false"] { cursor: default; }
+  .task.pending { opacity: 0.6; }
+  .handle { color: var(--text-faint); padding-top: 1px; font-weight: bold; flex-shrink: 0; cursor: grab; }
+  .task-body { flex: 1; cursor: pointer; min-width: 0; }
+  .task-text { word-break: break-word; line-height: 1.4; }
+  .task-meta { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 10px; padding: 1px 6px; border-radius: 10px; line-height: 1.5; display: inline-flex; align-items: center; gap: 3px; background: var(--secondary-bg); color: var(--text-muted); }
+  .badge-priority-High { background: rgba(226,75,74,0.15); color: var(--priority-high); }
+  .badge-priority-Medium { background: rgba(239,159,39,0.15); color: var(--priority-medium); }
+  .badge-priority-Low { background: rgba(151,196,89,0.15); color: var(--priority-low); }
+  .badge-deadline-overdue { background: var(--danger-bg); color: var(--danger-text); font-weight: 500; }
+  .badge-deadline-today { background: var(--warning-bg); color: var(--warning-text); font-weight: 500; }
+  .priority-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .priority-dot-High { background: var(--priority-high); }
+  .priority-dot-Medium { background: var(--priority-medium); }
+  .priority-dot-Low { background: var(--priority-low); }
+  .task-delete { background: none; border: none; padding: 0; color: var(--text-faint); cursor: pointer; font-size: 16px; height: auto; line-height: 1; flex-shrink: 0; }
+  .task-delete:hover { background: none; color: var(--danger-text); }
+
+  .done-section { margin-top: 12px; background: var(--success-bg); border: 0.5px solid var(--success-border); border-radius: var(--radius-lg); padding: 14px; }
+  .done-section .q-title, .done-section .q-sub, .done-section .count { color: var(--success-text); }
+  .done-section .task-list { min-height: 40px; }
+  .done-section .task { opacity: 0.65; }
+  .done-section .task-text { text-decoration: line-through; }
+  .done-toggle { background: none; border: none; cursor: pointer; padding: 0; display: flex; align-items: baseline; gap: 6px; font-family: inherit; height: auto; }
+  .done-toggle:hover { background: none; }
+  .done-collapsed .task-list { display: none; }
+
+  .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding: 0 4px; }
+  .footer button { font-size: 12px; padding: 4px 10px; height: auto; }
+  #summary { font-size: 12px; color: var(--text-faint); }
+  .tip { font-size: 11px; color: var(--text-faint); text-align: center; margin: 8px 4px 0; }
+  .drop-target { outline: 2px dashed var(--border-strong); outline-offset: -4px; }
+  .setup-banner { background: var(--info-bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin-bottom: 1rem; font-size: 13px; }
+  .setup-banner input { width: 100%; margin-top: 6px; font-family: monospace; font-size: 12px; }
+  .queue-indicator { font-size: 11px; color: var(--text-faint); }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-start; justify-content: center; padding: 4vh 1rem; overflow-y: auto; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border-strong); width: 100%; max-width: 600px; padding: 1.5rem; }
+  .modal h2 { font-size: 16px; font-weight: 500; margin: 0 0 1rem; }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input[type="text"], .field input[type="date"], .field select, .field textarea { width: 100%; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .links-list { margin: 0; padding: 0; list-style: none; }
+  .links-list li { margin-bottom: 4px; font-size: 13px; }
+  .links-list a { color: var(--info-text); word-break: break-all; }
+  .comments-thread { max-height: 240px; overflow-y: auto; border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 8px; background: var(--surface); margin-bottom: 8px; }
+  .comments-thread:empty::before { content: 'No comments yet.'; color: var(--text-faint); font-size: 12px; font-style: italic; }
+  .comment { padding: 8px; border-bottom: 0.5px solid var(--border); }
+  .comment:last-child { border-bottom: none; }
+  .comment-meta { font-size: 11px; color: var(--text-faint); margin-bottom: 2px; }
+  .comment-body { font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+  .comment-delete { float: right; background: none; border: none; padding: 0; color: var(--text-faint); cursor: pointer; font-size: 12px; height: auto; line-height: 1; }
+  .comment-delete:hover { background: none; color: var(--danger-text); }
+  .comment-input-row { display: flex; gap: 6px; }
+  .comment-input-row textarea { flex: 1; min-height: 40px; }
+  .comment-input-row button { align-self: stretch; }
+  .modal-footer { display: flex; justify-content: space-between; margin-top: 1.5rem; gap: 8px; }
+  .modal-footer-right { display: flex; gap: 8px; }
+
+  /* ---------- Mobile (iPhone) ---------- */
+  @media (max-width: 720px) {
+    body {
+      padding: 0.75rem;
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+      padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+      padding-left: max(0.75rem, env(safe-area-inset-left));
+      padding-right: max(0.75rem, env(safe-area-inset-right));
+    }
+    .grid { grid-template-columns: 1fr; gap: 10px; }
+    .quadrant { min-height: 0; padding: 12px; }
+    .toolbar { flex-wrap: wrap; }
+    .toolbar input[type="text"] { flex: 1 1 100%; }
+    .toolbar select { flex: 1; width: auto; min-width: 0; }
+    .toolbar button { flex: 0 0 auto; }
+    .filter-bar { flex-wrap: wrap; }
+    .shortcut-hint { display: none; } /* no keyboard on phones */
+    .footer { flex-wrap: wrap; gap: 10px; }
+    .footer button { flex: 1 1 auto; }
+    /* Bigger tap targets */
+    button { min-height: 40px; }
+    input[type="text"], input[type="date"], select { height: 40px; font-size: 16px; } /* 16px prevents iOS auto-zoom */
+    .task { padding: 10px; font-size: 14px; }
+    .handle { font-size: 16px; padding: 2px 4px; } /* easier to grab */
+    /* Modal: full-screen-ish on phones */
+    .modal { max-width: none; width: 100%; max-height: 92vh; }
+    /* Hide the standalone tip line (we'll keep the shortcuts panel for desktop) */
+    .tip { font-size: 11px; }
+  }
+
+  /* ---------- Categories ---------- */
+  /* A pill showing a category. Uses inline style for the actual color
+     (set per-element) so we don't need a stylesheet rule per category. */
+  .cat-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    line-height: 1.5; user-select: none;
+    border: 0.5px solid transparent;
+  }
+  .cat-chip.toggle {
+    cursor: pointer; padding: 4px 10px; font-size: 11px;
+    transition: opacity 0.15s, transform 0.08s;
+  }
+  .cat-chip.toggle:active { transform: scale(0.96); }
+  .cat-chip.toggle[aria-pressed="false"] {
+    opacity: 0.55;
+    background: var(--secondary-bg) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border) !important;
+  }
+  .cat-chip .x {
+    cursor: pointer; opacity: 0.6; padding: 0 2px;
+    font-size: 13px; line-height: 1;
+  }
+  .cat-chip .x:hover { opacity: 1; }
+
+  /* Filter bar */
+  .category-filter-bar {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .category-filter-bar .cf-label {
+    font-size: 11px; color: var(--text-faint); margin-right: 2px;
+  }
+  .category-filter-bar .cf-clear {
+    height: auto; padding: 4px 8px; font-size: 11px;
+    background: transparent; border: none; color: var(--text-faint);
+  }
+  .category-filter-bar .cf-clear:hover { background: transparent; color: var(--text); }
+
+  /* The category picker in the add-bar collapses to a single button on phones */
+  .cat-picker-inline {
+    display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    padding: 6px 0; margin-bottom: 0.5rem;
+  }
+  .cat-picker-inline .cp-label {
+    font-size: 11px; color: var(--text-faint); margin-right: 4px;
+  }
+
+  /* Task card: dim when filter is active and task doesn't match */
+  .task.dimmed { opacity: 0.35; }
+  .task.dimmed:hover { opacity: 0.6; }
+
+  /* Settings (categories) modal */
+  .cat-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-row .swatch {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 0.5px solid var(--border-strong); cursor: pointer; flex-shrink: 0;
+    position: relative; overflow: hidden;
+  }
+  .cat-row .swatch input[type="color"] {
+    position: absolute; inset: -4px; opacity: 0; cursor: pointer; border: 0;
+  }
+  .cat-row .cat-name-input {
+    flex: 1; height: 32px; font-size: 13px;
+  }
+  .cat-row button { height: 32px; font-size: 12px; padding: 0 10px; }
+
+  /* When installed as PWA on iOS, the body lives under the status bar — add room */
+  @media (display-mode: standalone) {
+    body { padding-top: max(1rem, env(safe-area-inset-top)); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-left">
+      <svg class="compass-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none"/>
+      </svg>
+      <div class="header-text">
+        <div class="title-row">
+          <h1>Focus Compass</h1>
+          <span class="online-dot" id="online-dot" aria-label="Online" title="Online"></span>
+          <span class="status" id="status">Setting up…</span>
+        </div>
+        <div class="greeting" id="greeting"></div>
+      </div>
+    </div>
+    <div class="avatar" title="Victor Ávila">VA</div>
+  </div>
+
+  <div class="setup-banner" id="setup-banner" style="display:none;">
+    <strong>One-time setup:</strong> paste the Apps Script Web App URL connected to your <em>personal</em> Google Sheet, then tap Save.
+    <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/AKfyc.../exec" autocapitalize="off" autocorrect="off" spellcheck="false" />
+    <button id="save-url-btn" style="margin-top: 8px;">Save URL</button>
+  </div>
+
+  <div class="toolbar">
+    <input type="text" id="task-input" placeholder="What needs to get done? (press N)" />
+    <select id="quadrant-select">
+      <option value="1. Do now">Do now</option>
+      <option value="2. Schedule" selected>Schedule</option>
+      <option value="3. Delegate">Delegate</option>
+      <option value="4. Drop">Drop</option>
+    </select>
+    <button id="add-btn">+ Add</button>
+  </div>
+
+  <div class="cat-picker-inline" id="add-cat-picker">
+    <span class="cp-label">Categories:</span>
+    <!-- chips injected by render() -->
+  </div>
+
+  <div class="filter-bar">
+    <input type="text" id="filter-input" placeholder="Filter tasks… (press /)" />
+    <button id="filter-clear" style="display: none;">Clear</button>
+    <span class="shortcut-hint">Press <kbd>?</kbd> for shortcuts</span>
+  </div>
+
+  <div class="category-filter-bar" id="cat-filter-bar">
+    <span class="cf-label">Show:</span>
+    <!-- chips injected by render() -->
+  </div>
+
+  <div class="grid">
+    <div class="quadrant q-do" data-q="1. Do now">
+      <div class="q-header"><div><span class="q-title">🔥 Do now</span><span class="q-sub">urgent · important</span></div><span class="count" data-q-count="1. Do now">0</span></div>
+      <ul class="task-list" data-list="1. Do now"></ul>
+    </div>
+    <div class="quadrant q-schedule" data-q="2. Schedule">
+      <div class="q-header"><div><span class="q-title">📅 Schedule</span><span class="q-sub">important · not urgent</span></div><span class="count" data-q-count="2. Schedule">0</span></div>
+      <ul class="task-list" data-list="2. Schedule"></ul>
+    </div>
+    <div class="quadrant q-delegate" data-q="3. Delegate">
+      <div class="q-header"><div><span class="q-title">👥 Delegate</span><span class="q-sub">urgent · not important</span></div><span class="count" data-q-count="3. Delegate">0</span></div>
+      <ul class="task-list" data-list="3. Delegate"></ul>
+    </div>
+    <div class="quadrant q-drop" data-q="4. Drop">
+      <div class="q-header"><div><span class="q-title">🗑 Drop</span><span class="q-sub">neither</span></div><span class="count" data-q-count="4. Drop">0</span></div>
+      <ul class="task-list" data-list="4. Drop"></ul>
+    </div>
+  </div>
+
+  <div class="done-section" id="done-section">
+    <div class="q-header">
+      <button class="done-toggle" id="done-toggle">
+        <span id="done-caret" style="color: var(--success-text);">▼</span>
+        <span class="q-title">✓ Concluded</span>
+        <span class="q-sub">tasks you've completed</span>
+      </button>
+      <span class="count" id="done-count">0</span>
+    </div>
+    <ul class="task-list" data-list="done"></ul>
+  </div>
+
+  <div class="footer">
+    <span id="summary">Loading…</span>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span class="queue-indicator" id="queue-indicator"></span>
+      <button id="settings-btn" title="Manage categories">⚙️</button>
+      <button id="sound-toggle" title="Toggle completion sound">🔔</button>
+      <button id="clear-done-btn">Clear concluded</button>
+      <button id="refresh-btn" title="Refresh (R)">↻ Refresh</button>
+    </div>
+  </div>
+
+  <p class="tip">Click a task for details. Drag between quadrants. <kbd>N</kbd> to add · <kbd>/</kbd> to filter · <kbd>R</kbd> to refresh · <kbd>?</kbd> for shortcuts.</p>
+
+  <div style="margin-top: 18px; padding-top: 14px; border-top: 0.5px solid var(--border); display: flex; justify-content: center;">
+    <button id="open-sheet-btn" title="Open the spreadsheet that stores your tasks">📊 Open spreadsheet database</button>
+  </div>
+</div>
+
+<!-- Shortcuts modal -->
+<div class="modal-backdrop" id="shortcuts-backdrop">
+  <div class="modal" style="max-width: 420px;">
+    <h2>Keyboard shortcuts</h2>
+    <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+      <tr><td style="padding: 6px 0;"><kbd>N</kbd></td><td style="color: var(--text-muted);">Focus add-task input</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>/</kbd></td><td style="color: var(--text-muted);">Focus filter input</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>R</kbd></td><td style="color: var(--text-muted);">Refresh tasks</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd></td><td style="color: var(--text-muted);">While adding: pick quadrant</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>Enter</kbd></td><td style="color: var(--text-muted);">Add task / post comment (with ⌘/Ctrl)</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>Esc</kbd></td><td style="color: var(--text-muted);">Close modal / clear filter</td></tr>
+      <tr><td style="padding: 6px 0;"><kbd>?</kbd></td><td style="color: var(--text-muted);">This shortcuts panel</td></tr>
+    </table>
+    <div class="modal-footer">
+      <span style="font-size: 12px; color: var(--text-faint);">Shortcuts won't trigger while typing in a field.</span>
+      <button id="shortcuts-close" class="primary">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings (categories) modal -->
+<div class="modal-backdrop" id="settings-backdrop">
+  <div class="modal" style="max-width: 480px;">
+    <h2>Categories</h2>
+    <p style="font-size: 12px; color: var(--text-muted); margin-top: -4px;">
+      Tap a swatch to change color. Empty name = removed on save.
+    </p>
+    <div id="settings-cat-list"></div>
+    <div style="margin-top: 12px; display: flex; gap: 8px;">
+      <input type="text" id="settings-new-cat" placeholder="New category name…" style="flex: 1;" />
+      <button id="settings-add-btn">+ Add</button>
+    </div>
+    <div class="modal-footer">
+      <span style="font-size: 12px; color: var(--text-faint);">Categories are stored on this device.</span>
+      <div class="modal-footer-right">
+        <button id="settings-cancel">Cancel</button>
+        <button id="settings-save" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal">
+    <h2>Task details</h2>
+    <div class="field">
+      <label for="m-task">Task</label>
+      <input type="text" id="m-task" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="m-quadrant">Quadrant</label>
+        <select id="m-quadrant">
+          <option value="1. Do now">Do now</option>
+          <option value="2. Schedule">Schedule</option>
+          <option value="3. Delegate">Delegate</option>
+          <option value="4. Drop">Drop</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="m-priority">Priority</label>
+        <select id="m-priority">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label for="m-deadline">Deadline</label>
+      <input type="date" id="m-deadline" />
+    </div>
+    <div class="field">
+      <label>Categories</label>
+      <div class="cat-picker-inline" id="m-cat-picker" style="margin: 0; padding: 4px 0;">
+        <!-- chips injected when modal opens -->
+      </div>
+    </div>
+    <div class="field">
+      <label for="m-links">Links (one URL per line)</label>
+      <textarea id="m-links" placeholder="https://docs.google.com/...&#10;https://nubank.atlassian.net/..."></textarea>
+      <ul class="links-list" id="m-links-rendered"></ul>
+    </div>
+    <div class="field">
+      <label>Comments</label>
+      <div class="comments-thread" id="m-comments-thread"></div>
+      <div class="comment-input-row">
+        <textarea id="m-comment-input" placeholder="Add a comment…"></textarea>
+        <button id="m-comment-add" class="primary">Post</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="m-delete" class="danger">Delete task</button>
+      <div class="modal-footer-right">
+        <button id="m-cancel">Cancel</button>
+        <button id="m-save" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_URL_KEY = 'eisenhower-api-url';
+  const DONE_COLLAPSED_KEY = 'eisenhower-done-collapsed';
+  const SHEET_URL_KEY = 'eisenhower-sheet-url';
+  let API_URL = localStorage.getItem(API_URL_KEY) || '';
+  let SHEET_URL = localStorage.getItem(SHEET_URL_KEY) || '';
+  let tasks = [];
+  let draggedId = null;
+  let editingId = null;
+  let editingComments = [];
+  let filterText = '';
+
+  const syncQueue = [];
+  let processingQueue = false;
+  const idMap = {};
+
+  // ---------- IndexedDB persistence (offline-safe state) ----------
+  // Stored under a single object store 'state', keyed by string:
+  //   'tasks'   → the last-known tasks array
+  //   'queue'   → the pending sync queue (with tempIds and params)
+  //   'idMap'   → tempId → serverId mapping (for queued jobs that reference temps)
+  // Failures here are non-fatal; app continues in-memory.
+  const IDB_NAME = 'focus-compass';
+  const IDB_VERSION = 1;
+  let idbPromise = null;
+  const openIdb = () => {
+    if (idbPromise) return idbPromise;
+    idbPromise = new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { reject(new Error('No IndexedDB')); return; }
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('state')) db.createObjectStore('state');
+      };
+      req.onsuccess = (e) => resolve(e.target.result);
+      req.onerror = (e) => reject(e.target.error);
+    });
+    return idbPromise;
+  };
+  const idbGet = async (key) => {
+    try {
+      const db = await openIdb();
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction('state', 'readonly');
+        const req = tx.objectStore('state').get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    } catch (e) { return undefined; }
+  };
+  const idbSet = async (key, value) => {
+    try {
+      const db = await openIdb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('state', 'readwrite');
+        tx.objectStore('state').put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (e) { /* swallow */ }
+  };
+  // Debounced tasks snapshot — many UI events fire in a row, no need to write each time.
+  let tasksSnapTimer = null;
+  const saveTasksSoon = () => {
+    if (tasksSnapTimer) clearTimeout(tasksSnapTimer);
+    tasksSnapTimer = setTimeout(() => { idbSet('tasks', tasks); }, 250);
+  };
+  const saveQueue = () => idbSet('queue', syncQueue);
+  const saveIdMap = () => idbSet('idMap', idMap);
+
+  // ---------- Online / offline tracking ----------
+  let isOnline = (typeof navigator !== 'undefined' && 'onLine' in navigator) ? navigator.onLine : true;
+  const updateOnlineIndicator = () => {
+    const dot = document.getElementById('online-dot');
+    if (!dot) return;
+    dot.classList.toggle('offline', !isOnline);
+    dot.title = isOnline ? 'Online' : 'Offline — changes saved locally and will sync when you reconnect';
+  };
+  window.addEventListener('online', () => {
+    isOnline = true; updateOnlineIndicator();
+    if (syncQueue.length > 0) processQueue();
+    else setStatus('Synced · ' + new Date().toLocaleTimeString(), '');
+  });
+  window.addEventListener('offline', () => {
+    isOnline = false; updateOnlineIndicator();
+    setStatus('Offline · changes will sync when you reconnect', 'error');
+  });
+
+  // ---------- Time-aware greeting ----------
+  const setGreeting = () => {
+    const el = document.getElementById('greeting');
+    if (!el) return;
+    const h = new Date().getHours();
+    let g;
+    if (h < 5) g = 'Working late, Victor';
+    else if (h < 12) g = 'Good morning, Victor';
+    else if (h < 17) g = 'Good afternoon, Victor';
+    else if (h < 21) g = 'Good evening, Victor';
+    else g = 'Wrapping up, Victor';
+    // Day of week flourish
+    const day = new Date().toLocaleDateString(undefined, { weekday: 'long' });
+    el.textContent = g + ' · ' + day;
+  };
+  setGreeting();
+  // Re-check every 30 min in case the page stays open across the boundary
+  setInterval(setGreeting, 30 * 60 * 1000);
+
+  const status = document.getElementById('status');
+  const banner = document.getElementById('setup-banner');
+  const doneSection = document.getElementById('done-section');
+  const queueIndicator = document.getElementById('queue-indicator');
+  const backdrop = document.getElementById('modal-backdrop');
+
+  if (localStorage.getItem(DONE_COLLAPSED_KEY) === 'true') {
+    doneSection.classList.add('done-collapsed');
+    document.getElementById('done-caret').textContent = '▶';
+  }
+
+  const setStatus = (text, type) => { status.textContent = text; status.className = 'status ' + (type || ''); };
+  const updateQueueIndicator = () => { queueIndicator.textContent = syncQueue.length > 0 ? '↻ ' + syncQueue.length + ' pending' : ''; };
+
+  // ---------- Completion chime ----------
+  const SOUND_ENABLED_KEY = 'eisenhower-sound-enabled';
+  let soundEnabled = localStorage.getItem(SOUND_ENABLED_KEY) !== 'false'; // default on
+  let audioCtx = null;
+  const playCompleteSound = () => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      // Two-note ascending chime: E5 (659.25 Hz) -> A5 (880 Hz)
+      // Soft attack, gentle decay, sine wave with slight harmonic for warmth
+      const notes = [
+        { freq: 659.25, start: 0,     duration: 0.18 },
+        { freq: 880.00, start: 0.08,  duration: 0.32 }
+      ];
+
+      notes.forEach(n => {
+        // Fundamental sine
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = n.freq;
+        gain.gain.setValueAtTime(0, now + n.start);
+        gain.gain.linearRampToValueAtTime(0.18, now + n.start + 0.01); // soft attack
+        gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.duration);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + n.start);
+        osc.stop(now + n.start + n.duration + 0.05);
+
+        // Subtle harmonic (octave up) for sparkle
+        const oscH = audioCtx.createOscillator();
+        const gainH = audioCtx.createGain();
+        oscH.type = 'sine';
+        oscH.frequency.value = n.freq * 2;
+        gainH.gain.setValueAtTime(0, now + n.start);
+        gainH.gain.linearRampToValueAtTime(0.04, now + n.start + 0.01);
+        gainH.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.duration * 0.6);
+        oscH.connect(gainH).connect(audioCtx.destination);
+        oscH.start(now + n.start);
+        oscH.stop(now + n.start + n.duration + 0.05);
+      });
+    } catch (e) {
+      // Silent fail — audio not critical
+    }
+  };
+
+  if (!API_URL) banner.style.display = 'block';
+  document.getElementById('save-url-btn').addEventListener('click', () => {
+    const url = document.getElementById('api-url-input').value.trim();
+    if (!url.startsWith('https://script.google.com/')) { alert('That doesn\'t look like an Apps Script URL.'); return; }
+    API_URL = url; localStorage.setItem(API_URL_KEY, url); banner.style.display = 'none'; loadTasks();
+  });
+
+  const rawApi = async (action, params) => {
+    if (!API_URL) return { error: 'No API URL' };
+    try {
+      const url = API_URL + '?action=' + encodeURIComponent(action);
+      const opts = action === 'list'
+        ? { method: 'GET' }
+        : { method: 'POST', body: JSON.stringify(params || {}), headers: { 'Content-Type': 'text/plain' } };
+      const r = await fetch(url, opts);
+      return await r.json();
+    } catch (err) { return { error: err.toString() }; }
+  };
+
+  const queueSync = (action, params, tempId) => {
+    syncQueue.push({ action, params, tempId });
+    saveQueue();
+    saveTasksSoon();
+    updateQueueIndicator();
+    processQueue();
+  };
+
+  const processQueue = async () => {
+    if (processingQueue || syncQueue.length === 0 || !API_URL) return;
+    if (!isOnline) {
+      setStatus('Offline · ' + syncQueue.length + ' change' + (syncQueue.length > 1 ? 's' : '') + ' queued', 'error');
+      return;
+    }
+    processingQueue = true;
+    setStatus('Syncing…', 'syncing');
+    while (syncQueue.length > 0) {
+      const job = syncQueue[0];
+      const params = { ...job.params };
+      if (params.id && idMap[params.id]) params.id = idMap[params.id];
+      const result = await rawApi(job.action, params);
+      // Distinguish transient (network/offline) failures from real errors.
+      // rawApi returns { error: ... } on either; we use navigator.onLine as a tiebreaker.
+      if (result && result.error) {
+        if (!navigator.onLine) {
+          isOnline = false; updateOnlineIndicator();
+          setStatus('Offline · ' + syncQueue.length + ' change' + (syncQueue.length > 1 ? 's' : '') + ' queued', 'error');
+        } else {
+          setStatus('Sync error: ' + result.error, 'error');
+        }
+        processingQueue = false; updateQueueIndicator(); return;
+      }
+      if (job.action === 'add' && result && result.id && job.tempId) {
+        idMap[job.tempId] = result.id;
+        saveIdMap();
+        const t = tasks.find(x => x.id === job.tempId);
+        if (t) t.id = result.id;
+        const el = document.querySelector('li[data-id="' + job.tempId + '"]');
+        if (el) {
+          el.dataset.id = result.id; el.classList.remove('pending');
+          const tog = el.querySelector('[data-toggle]'); if (tog) tog.dataset.toggle = result.id;
+          const del = el.querySelector('[data-delete]'); if (del) del.dataset.delete = result.id;
+        }
+        saveTasksSoon();
+      }
+      syncQueue.shift();
+      saveQueue();
+      updateQueueIndicator();
+    }
+    setStatus('Synced · ' + new Date().toLocaleTimeString(), 'synced');
+    setTimeout(() => { if (syncQueue.length === 0) setStatus('Synced · ' + new Date().toLocaleTimeString(), ''); }, 1500);
+    processingQueue = false;
+  };
+
+  const parseComments = (raw) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try { return JSON.parse(raw) || []; } catch (e) { return []; }
+  };
+
+  const parseCategoryIds = (raw) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+    return String(raw).split(',').map(s => s.trim()).filter(Boolean);
+  };
+
+  const loadTasks = async () => {
+    if (!API_URL) { setStatus('Paste your API URL above', ''); return; }
+    if (!isOnline) {
+      setStatus('Offline · showing cached tasks', 'error');
+      return;
+    }
+    setStatus('Loading…', 'syncing');
+    const data = await rawApi('list');
+    if (!data || data.error) {
+      if (!navigator.onLine) {
+        isOnline = false; updateOnlineIndicator();
+        setStatus('Offline · showing cached tasks', 'error');
+      } else {
+        setStatus('Load error', 'error');
+      }
+      return;
+    }
+    // Preserve any locally-pending tasks (still have temp IDs and haven't synced yet).
+    // They'll be reconciled when the queue drains and idMap gets populated.
+    const pendingByTemp = tasks.filter(t => t.pending && t.id && t.id.startsWith('tmp_'));
+    const serverTasks = (data.tasks || []).map(t => ({
+      id: String(t.ID || ''),
+      text: String(t.Task || ''),
+      q: String(t.Quadrant || '2. Schedule'),
+      done: t.Done === true || t.Done === 'TRUE' || t.Done === 'true',
+      priority: String(t.Priority || 'Medium'),
+      deadline: t.Deadline ? String(t.Deadline).slice(0, 10) : '',
+      links: String(t.Links || ''),
+      comments: parseComments(t.Comments),
+      categories: parseCategoryIds(t.Category)
+    }));
+    const resolvedTempIds = new Set(Object.keys(idMap));
+    const stillPending = pendingByTemp.filter(t => !resolvedTempIds.has(t.id));
+    tasks = serverTasks.concat(stillPending);
+    saveTasksSoon();
+    setStatus('Synced · ' + new Date().toLocaleTimeString(), '');
+    render();
+  };
+
+  // ---------- Deadline formatting ----------
+  const formatDeadline = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((d - today) / (1000 * 60 * 60 * 24));
+    let label, cls = '';
+    if (diffDays < 0) { label = 'Overdue'; cls = 'badge-deadline-overdue'; }
+    else if (diffDays === 0) { label = 'Today'; cls = 'badge-deadline-today'; }
+    else if (diffDays === 1) { label = 'Tomorrow'; cls = 'badge-deadline-today'; }
+    else if (diffDays <= 7) { label = 'In ' + diffDays + ' days'; }
+    else { label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+    return { label, cls };
+  };
+
+  // ---------- Category chip helpers ----------
+  // Make a contrast-safe text color over a colored background.
+  const contrastText = (hex) => {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!m) return '#fff';
+    const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+    // Perceived luminance
+    const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return L > 0.62 ? '#1a1a1a' : '#ffffff';
+  };
+  // Soft tinted background (with the brand color at ~18% opacity) — used on task cards
+  const tintedBg = (hex) => {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
+    if (!m) return 'transparent';
+    const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',0.16)';
+  };
+  // Render a static (non-clickable) chip showing a category
+  const catChipHTML = (cat) => {
+    if (!cat) return '';
+    const bg = tintedBg(cat.color);
+    return '<span class="cat-chip" style="background:' + bg + ';color:' + cat.color + ';border-color:' + cat.color + '33;">' +
+           escapeHtml(cat.name) + '</span>';
+  };
+  // Escape user-provided strings used in innerHTML
+  const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+
+  // Render a chip-toggle picker into a container.
+  // - container: DOM element (chips are appended after any existing static children
+  //   with class 'cp-label' or 'cf-label' or 'cf-clear')
+  // - selectedIds: Set<string>
+  // - onChange: (newSet) => void
+  const renderChipToggles = (container, selectedIds, onChange) => {
+    // Remove only the chip children, keep static labels/buttons
+    [...container.querySelectorAll('.cat-chip')].forEach(el => el.remove());
+    categories.forEach(cat => {
+      const on = selectedIds.has(cat.id);
+      const chip = document.createElement('span');
+      chip.className = 'cat-chip toggle';
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      chip.dataset.catId = cat.id;
+      chip.style.background = tintedBg(cat.color);
+      chip.style.color = cat.color;
+      chip.style.borderColor = cat.color + '55';
+      chip.textContent = cat.name;
+      chip.addEventListener('click', () => {
+        if (selectedIds.has(cat.id)) selectedIds.delete(cat.id);
+        else selectedIds.add(cat.id);
+        renderChipToggles(container, selectedIds, onChange); // re-render this picker
+        onChange(selectedIds);
+      });
+      container.appendChild(chip);
+    });
+  };
+
+  // State: selected categories for the "add new task" picker
+  const addBarSelected = new Set();
+  // State: selected categories for the modal (rebuilt when modal opens)
+  let modalSelected = new Set();
+
+  const renderTask = (t) => {
+    const li = document.createElement('li');
+    li.className = 'task' + (t.pending ? ' pending' : '');
+    li.draggable = !t.done;
+    li.dataset.id = t.id;
+
+    // Dim if there's an active category filter and this task doesn't match
+    if (activeCategoryFilter.length > 0) {
+      const taskCats = t.categories || [];
+      const matches = taskCats.some(id => activeCategoryFilter.includes(id));
+      if (!matches) li.classList.add('dimmed');
+    }
+
+    let badges = '';
+    if (t.priority && t.priority !== 'Medium') {
+      badges += '<span class="badge badge-priority-' + t.priority + '"><span class="priority-dot priority-dot-' + t.priority + '"></span>' + t.priority + '</span>';
+    }
+    const dl = formatDeadline(t.deadline);
+    if (dl) badges += '<span class="badge ' + dl.cls + '">⏰ ' + dl.label + '</span>';
+    const linkCount = t.links ? t.links.split('\n').filter(l => l.trim()).length : 0;
+    if (linkCount > 0) badges += '<span class="badge">🔗 ' + linkCount + '</span>';
+    const commentCount = (t.comments || []).length;
+    if (commentCount > 0) badges += '<span class="badge">💬 ' + commentCount + '</span>';
+    // Category chips
+    (t.categories || []).forEach(id => {
+      const cat = getCategoryById(id);
+      if (cat) badges += catChipHTML(cat);
+    });
+
+    li.innerHTML =
+      (t.done ? '' : '<span class="handle" aria-hidden="true">⋮⋮</span>') +
+      '<input type="checkbox" ' + (t.done ? 'checked' : '') + ' data-toggle="' + t.id + '" />' +
+      '<div class="task-body" data-open="' + t.id + '">' +
+        '<div class="task-text">' + escapeHtml(t.text) + '</div>' +
+        (badges ? '<div class="task-meta">' + badges + '</div>' : '') +
+      '</div>' +
+      '<button class="task-delete" data-delete="' + t.id + '" aria-label="Delete">×</button>';
+    return li;
+  };
+
+  const matchesFilter = (t) => {
+    if (!filterText) return true;
+    const haystack = (t.text + ' ' + (t.links || '') + ' ' + (t.comments || []).map(c => c.body).join(' ')).toLowerCase();
+    return haystack.includes(filterText.toLowerCase());
+  };
+
+  // Re-render the add-bar picker (chip toggles) and the category filter bar.
+  // Called from render() and when categories are edited via settings.
+  const renderCategoryWidgets = () => {
+    // Add-bar picker
+    renderChipToggles(
+      document.getElementById('add-cat-picker'),
+      addBarSelected,
+      () => {} // no side effects beyond visual toggle
+    );
+    // Filter bar
+    const bar = document.getElementById('cat-filter-bar');
+    [...bar.querySelectorAll('.cat-chip, .cf-clear')].forEach(el => el.remove());
+    categories.forEach(cat => {
+      const on = activeCategoryFilter.includes(cat.id);
+      const chip = document.createElement('span');
+      chip.className = 'cat-chip toggle';
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      chip.style.background = tintedBg(cat.color);
+      chip.style.color = cat.color;
+      chip.style.borderColor = cat.color + '55';
+      chip.textContent = cat.name;
+      chip.addEventListener('click', () => {
+        const i = activeCategoryFilter.indexOf(cat.id);
+        if (i >= 0) activeCategoryFilter.splice(i, 1);
+        else activeCategoryFilter.push(cat.id);
+        persistCategoryFilter();
+        render();
+      });
+      bar.appendChild(chip);
+    });
+    if (activeCategoryFilter.length > 0) {
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'cf-clear';
+      clearBtn.textContent = 'Clear filter';
+      clearBtn.addEventListener('click', () => {
+        activeCategoryFilter = [];
+        persistCategoryFilter();
+        render();
+      });
+      bar.appendChild(clearBtn);
+    }
+  };
+
+  const render = () => {
+    renderCategoryWidgets();
+    ['1. Do now', '2. Schedule', '3. Delegate', '4. Drop'].forEach(q => {
+      const list = document.querySelector('[data-list="' + q + '"]');
+      const count = document.querySelector('[data-q-count="' + q + '"]');
+      const items = tasks.filter(t => t.q === q && !t.done);
+      items.sort((a, b) => {
+        const pOrder = { High: 0, Medium: 1, Low: 2 };
+        const pa = pOrder[a.priority] || 1, pb = pOrder[b.priority] || 1;
+        if (pa !== pb) return pa - pb;
+        if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
+        if (a.deadline) return -1;
+        if (b.deadline) return 1;
+        return 0;
+      });
+      const visibleItems = items.filter(matchesFilter);
+      count.textContent = items.length;
+      list.innerHTML = '';
+      if (items.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'empty-state' + (q === '1. Do now' ? ' celebrate' : '');
+        if (q === '1. Do now') empty.textContent = '✓ Nothing urgent. Breathe.';
+        else if (q === '2. Schedule') empty.textContent = 'No future plans here yet.';
+        else if (q === '3. Delegate') empty.textContent = 'Nothing to hand off.';
+        else empty.textContent = 'Nothing to let go of.';
+        list.appendChild(empty);
+      } else if (visibleItems.length === 0 && filterText) {
+        const empty = document.createElement('li');
+        empty.className = 'empty-state';
+        empty.textContent = 'No matches in this quadrant.';
+        list.appendChild(empty);
+      } else {
+        visibleItems.forEach(t => list.appendChild(renderTask(t)));
+      }
+    });
+    const doneList = document.querySelector('[data-list="done"]');
+    const doneItems = tasks.filter(t => t.done);
+    const visibleDone = doneItems.filter(matchesFilter);
+    doneList.innerHTML = '';
+    visibleDone.forEach(t => doneList.appendChild(renderTask(t)));
+    document.getElementById('done-count').textContent = doneItems.length;
+
+    // Stats strip
+    const total = tasks.length;
+    const done = doneItems.length;
+    const doCount = tasks.filter(t => t.q === '1. Do now' && !t.done).length;
+    const today = new Date().toISOString().slice(0, 10);
+    const doneToday = tasks.filter(t => t.done && t.completedDate === today).length;
+    const overdueCount = tasks.filter(t => !t.done && t.deadline && t.deadline < today).length;
+    const summary = document.getElementById('summary');
+    if (total === 0) {
+      summary.textContent = "No tasks yet — add what's swirling in your head.";
+    } else {
+      const parts = [];
+      if (doneToday > 0) parts.push(doneToday + ' done today');
+      else parts.push(done + '/' + total + ' done');
+      if (doCount > 0) parts.push(doCount + ' urgent');
+      if (overdueCount > 0) parts.push(overdueCount + ' overdue');
+      summary.textContent = parts.join(' · ');
+    }
+  };
+
+  const makeTempId = () => 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+
+  // ADD
+  document.getElementById('add-btn').addEventListener('click', () => {
+    const input = document.getElementById('task-input');
+    const text = input.value.trim();
+    if (!text) return;
+    const q = document.getElementById('quadrant-select').value;
+    const cats = [...addBarSelected];
+    const tempId = makeTempId();
+    tasks.push({ id: tempId, text, q, done: false, pending: true, priority: 'Medium', deadline: '', links: '', comments: [], categories: cats });
+    input.value = '';
+    render();
+    queueSync('add', { task: text, quadrant: q, priority: 'Medium', category: cats.join(',') }, tempId);
+    input.focus();
+  });
+  document.getElementById('task-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('add-btn').click(); });
+
+  // ---------- Modal ----------
+  const openModal = (id) => {
+    const t = tasks.find(x => x.id === id);
+    if (!t) return;
+    editingId = id;
+    editingComments = [...(t.comments || [])];
+    modalSelected = new Set(t.categories || []);
+    document.getElementById('m-task').value = t.text;
+    document.getElementById('m-quadrant').value = t.q;
+    document.getElementById('m-priority').value = t.priority || 'Medium';
+    document.getElementById('m-deadline').value = t.deadline || '';
+    document.getElementById('m-links').value = t.links || '';
+    renderLinksList(t.links || '');
+    renderCommentsThread();
+    renderChipToggles(document.getElementById('m-cat-picker'), modalSelected, () => {});
+    backdrop.classList.add('open');
+    setTimeout(() => document.getElementById('m-task').focus(), 50);
+  };
+
+  const closeModal = () => {
+    backdrop.classList.remove('open');
+    editingId = null;
+    editingComments = [];
+  };
+
+  const renderLinksList = (linksText) => {
+    const ul = document.getElementById('m-links-rendered');
+    ul.innerHTML = '';
+    const urls = (linksText || '').split('\n').map(s => s.trim()).filter(s => s);
+    urls.forEach(url => {
+      const li = document.createElement('li');
+      const safeUrl = url.startsWith('http') ? url : 'https://' + url;
+      const displayUrl = url.replace(/</g, '&lt;');
+      li.innerHTML = '→ <a href="' + safeUrl.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + displayUrl + '</a>';
+      ul.appendChild(li);
+    });
+  };
+
+  const renderCommentsThread = () => {
+    const thread = document.getElementById('m-comments-thread');
+    thread.innerHTML = '';
+    editingComments.forEach((c, idx) => {
+      const div = document.createElement('div');
+      div.className = 'comment';
+      const ts = new Date(c.ts);
+      const tsStr = ts.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      div.innerHTML =
+        '<button class="comment-delete" data-comment-delete="' + idx + '" aria-label="Delete comment">×</button>' +
+        '<div class="comment-meta">' + tsStr + '</div>' +
+        '<div class="comment-body">' + c.body.replace(/</g, '&lt;') + '</div>';
+      thread.appendChild(div);
+    });
+  };
+
+  // Live re-render links as user types
+  document.getElementById('m-links').addEventListener('input', e => renderLinksList(e.target.value));
+
+  // Add comment
+  document.getElementById('m-comment-add').addEventListener('click', () => {
+    const input = document.getElementById('m-comment-input');
+    const body = input.value.trim();
+    if (!body) return;
+    editingComments.push({ ts: new Date().toISOString(), body });
+    input.value = '';
+    renderCommentsThread();
+  });
+  document.getElementById('m-comment-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); document.getElementById('m-comment-add').click(); }
+  });
+
+  // Delete comment
+  document.getElementById('m-comments-thread').addEventListener('click', e => {
+    const btn = e.target.closest('[data-comment-delete]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.commentDelete, 10);
+    editingComments.splice(idx, 1);
+    renderCommentsThread();
+  });
+
+  // Save
+  document.getElementById('m-save').addEventListener('click', () => {
+    if (!editingId) return;
+    const t = tasks.find(x => x.id === editingId);
+    if (!t) return;
+    t.text = document.getElementById('m-task').value.trim() || t.text;
+    t.q = document.getElementById('m-quadrant').value;
+    t.priority = document.getElementById('m-priority').value;
+    t.deadline = document.getElementById('m-deadline').value;
+    t.links = document.getElementById('m-links').value.trim();
+    t.comments = [...editingComments];
+    t.categories = [...modalSelected];
+    render();
+    queueSync('update', {
+      id: t.id,
+      task: t.text,
+      quadrant: t.q,
+      priority: t.priority,
+      deadline: t.deadline,
+      links: t.links,
+      comments: JSON.stringify(t.comments),
+      category: t.categories.join(',')
+    });
+    closeModal();
+  });
+
+  // Cancel
+  document.getElementById('m-cancel').addEventListener('click', closeModal);
+
+  // Delete from modal
+  document.getElementById('m-delete').addEventListener('click', () => {
+    if (!editingId) return;
+    if (!confirm('Delete this task? This cannot be undone.')) return;
+    const id = editingId;
+    tasks = tasks.filter(t => t.id !== id);
+    render();
+    queueSync('delete', { id });
+    closeModal();
+  });
+
+  // Backdrop click
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && backdrop.classList.contains('open')) closeModal(); });
+
+  // ---------- Task list clicks ----------
+  document.body.addEventListener('click', e => {
+    // Don't handle clicks inside the modal
+    if (e.target.closest('.modal')) return;
+
+    const open = e.target.closest('[data-open]');
+    if (open) { openModal(open.dataset.open); return; }
+
+    const del = e.target.closest('[data-delete]');
+    if (del) {
+      const id = del.dataset.delete;
+      tasks = tasks.filter(t => t.id !== id);
+      render();
+      queueSync('delete', { id });
+      return;
+    }
+    const toggle = e.target.closest('[data-toggle]');
+    if (toggle) {
+      const id = toggle.dataset.toggle;
+      const t = tasks.find(x => x.id === id);
+      if (t) {
+        const wasDone = t.done;
+        t.done = !t.done;
+        if (!wasDone && t.done) {
+          t.completedDate = new Date().toISOString().slice(0, 10);
+          playCompleteSound();
+        }
+        render();
+        queueSync('update', { id, done: t.done });
+      }
+    }
+  });
+
+  document.getElementById('done-toggle').addEventListener('click', () => {
+    const collapsed = doneSection.classList.toggle('done-collapsed');
+    document.getElementById('done-caret').textContent = collapsed ? '▶' : '▼';
+    localStorage.setItem(DONE_COLLAPSED_KEY, collapsed ? 'true' : 'false');
+  });
+
+  document.getElementById('clear-done-btn').addEventListener('click', () => {
+    const doneItems = tasks.filter(t => t.done);
+    if (doneItems.length === 0) return;
+    if (!confirm('Delete all ' + doneItems.length + ' concluded task(s)? This cannot be undone.')) return;
+    const ids = doneItems.map(t => t.id);
+    tasks = tasks.filter(t => !t.done);
+    render();
+    ids.forEach(id => queueSync('delete', { id }));
+  });
+
+  // Drag and drop
+  document.body.addEventListener('dragstart', e => {
+    const li = e.target.closest('li[data-id]');
+    if (!li || !li.draggable) return;
+    draggedId = li.dataset.id;
+    li.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  document.body.addEventListener('dragend', e => {
+    const li = e.target.closest('li[data-id]');
+    if (li) li.style.opacity = '';
+    document.querySelectorAll('.quadrant').forEach(q => q.classList.remove('drop-target'));
+    draggedId = null;
+  });
+  document.querySelectorAll('.quadrant').forEach(q => {
+    q.addEventListener('dragover', e => { e.preventDefault(); q.classList.add('drop-target'); });
+    q.addEventListener('dragleave', e => { if (!q.contains(e.relatedTarget)) q.classList.remove('drop-target'); });
+    q.addEventListener('drop', e => {
+      e.preventDefault();
+      q.classList.remove('drop-target');
+      if (!draggedId) return;
+      const t = tasks.find(x => x.id === draggedId);
+      if (t && t.q !== q.dataset.q) {
+        t.q = q.dataset.q;
+        render();
+        queueSync('move', { id: t.id, quadrant: q.dataset.q });
+      }
+    });
+  });
+
+  document.getElementById('refresh-btn').addEventListener('click', loadTasks);
+
+  // Open spreadsheet database — prompts once for the URL, then persists it
+  document.getElementById('open-sheet-btn').addEventListener('click', () => {
+    if (!SHEET_URL) {
+      const input = prompt('Paste the spreadsheet URL where your tasks are stored:\n(https://docs.google.com/spreadsheets/...)');
+      if (!input) return;
+      const url = input.trim();
+      if (!/^https:\/\/docs\.google\.com\/spreadsheets\//.test(url)) {
+        alert("That doesn't look like a Google Sheets URL.");
+        return;
+      }
+      SHEET_URL = url;
+      localStorage.setItem(SHEET_URL_KEY, SHEET_URL);
+    }
+    window.open(SHEET_URL, '_blank', 'noopener');
+  });
+
+  // Sound toggle
+  const soundBtn = document.getElementById('sound-toggle');
+  const updateSoundBtn = () => { soundBtn.textContent = soundEnabled ? '🔔' : '🔕'; soundBtn.title = soundEnabled ? 'Mute completion sound' : 'Unmute completion sound'; };
+  updateSoundBtn();
+  soundBtn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem(SOUND_ENABLED_KEY, soundEnabled ? 'true' : 'false');
+    updateSoundBtn();
+    if (soundEnabled) playCompleteSound(); // little preview when re-enabling
+  });
+
+  window.addEventListener('beforeunload', e => {
+    if (syncQueue.length > 0) {
+      e.preventDefault();
+      e.returnValue = 'You have ' + syncQueue.length + ' changes still syncing. Leave anyway?';
+      return e.returnValue;
+    }
+  });
+
+  // ---------- Filter input ----------
+  const filterInput = document.getElementById('filter-input');
+  const filterClear = document.getElementById('filter-clear');
+  filterInput.addEventListener('input', e => {
+    filterText = e.target.value.trim();
+    filterClear.style.display = filterText ? '' : 'none';
+    render();
+  });
+  filterClear.addEventListener('click', () => {
+    filterInput.value = ''; filterText = ''; filterClear.style.display = 'none'; render();
+  });
+
+  // ---------- Settings (categories) modal ----------
+  const settingsBackdrop = document.getElementById('settings-backdrop');
+  let settingsDraft = []; // working copy while editing
+
+  const renderSettingsList = () => {
+    const list = document.getElementById('settings-cat-list');
+    list.innerHTML = '';
+    settingsDraft.forEach((cat, idx) => {
+      const row = document.createElement('div');
+      row.className = 'cat-row';
+      // Swatch (wraps the hidden color input)
+      const swatch = document.createElement('label');
+      swatch.className = 'swatch';
+      swatch.style.background = cat.color;
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = cat.color;
+      colorInput.addEventListener('input', e => {
+        settingsDraft[idx].color = e.target.value;
+        swatch.style.background = e.target.value;
+      });
+      swatch.appendChild(colorInput);
+      // Name input
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'cat-name-input';
+      nameInput.value = cat.name;
+      nameInput.addEventListener('input', e => {
+        settingsDraft[idx].name = e.target.value;
+      });
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Remove';
+      delBtn.className = 'danger';
+      delBtn.addEventListener('click', () => {
+        settingsDraft.splice(idx, 1);
+        renderSettingsList();
+      });
+      row.appendChild(swatch);
+      row.appendChild(nameInput);
+      row.appendChild(delBtn);
+      list.appendChild(row);
+    });
+    if (settingsDraft.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No categories. Add one below.';
+      list.appendChild(empty);
+    }
+  };
+
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    // Deep copy so Cancel really discards
+    settingsDraft = categories.map(c => ({ ...c }));
+    renderSettingsList();
+    settingsBackdrop.classList.add('open');
+  });
+  document.getElementById('settings-cancel').addEventListener('click', () => {
+    settingsBackdrop.classList.remove('open');
+  });
+  settingsBackdrop.addEventListener('click', e => {
+    if (e.target === settingsBackdrop) settingsBackdrop.classList.remove('open');
+  });
+  document.getElementById('settings-add-btn').addEventListener('click', () => {
+    const input = document.getElementById('settings-new-cat');
+    const name = input.value.trim();
+    if (!name) return;
+    const baseId = slugify(name) || 'cat';
+    // Generate unique id within the draft (not just the live categories)
+    let id = baseId, n = 1;
+    while (settingsDraft.some(c => c.id === id)) { id = baseId + '-' + (++n); }
+    // Pick a default color from a palette so new ones aren't always the same
+    const palette = ['#2d8c5c', '#2c6cb0', '#c08a1a', '#7a4fc4', '#b94d6a', '#3a8e8e', '#a06d2b'];
+    const color = palette[settingsDraft.length % palette.length];
+    settingsDraft.push({ id, name, color });
+    input.value = '';
+    renderSettingsList();
+  });
+  document.getElementById('settings-new-cat').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('settings-add-btn').click(); }
+  });
+  document.getElementById('settings-save').addEventListener('click', () => {
+    // Strip empty-name rows; trim names; ensure unique ids
+    const cleaned = settingsDraft
+      .map(c => ({ ...c, name: c.name.trim() }))
+      .filter(c => c.name.length > 0);
+    // Resolve duplicate ids by re-slugifying
+    const seen = new Set();
+    cleaned.forEach(c => {
+      let id = c.id || slugify(c.name) || 'cat';
+      let n = 1;
+      const base = id;
+      while (seen.has(id)) id = base + '-' + (++n);
+      c.id = id;
+      seen.add(id);
+    });
+    categories = cleaned;
+    persistCategories();
+    // Drop filter ids that no longer exist
+    activeCategoryFilter = activeCategoryFilter.filter(id => getCategoryById(id));
+    persistCategoryFilter();
+    // Drop add-bar selections that no longer exist
+    [...addBarSelected].forEach(id => { if (!getCategoryById(id)) addBarSelected.delete(id); });
+    // Drop deleted category ids from each task — but only locally; the underlying
+    // sheet still has the comma-separated string. We leave it alone so a renamed
+    // (or undeleted) category re-appears next time.
+    settingsBackdrop.classList.remove('open');
+    render();
+  });
+
+  // ---------- Keyboard shortcuts ----------
+  const shortcutsBackdrop = document.getElementById('shortcuts-backdrop');
+  document.getElementById('shortcuts-close').addEventListener('click', () => shortcutsBackdrop.classList.remove('open'));
+  shortcutsBackdrop.addEventListener('click', e => { if (e.target === shortcutsBackdrop) shortcutsBackdrop.classList.remove('open'); });
+
+  document.addEventListener('keydown', e => {
+    // Skip if user is typing in a field, except for Esc
+    const inField = e.target.matches('input, textarea, select');
+    const taskInput = document.getElementById('task-input');
+
+    if (e.key === 'Escape') {
+      if (shortcutsBackdrop.classList.contains('open')) { shortcutsBackdrop.classList.remove('open'); return; }
+      if (settingsBackdrop.classList.contains('open')) { settingsBackdrop.classList.remove('open'); return; }
+      if (backdrop.classList.contains('open')) { closeModal(); return; }
+      if (filterText) { filterInput.value = ''; filterText = ''; filterClear.style.display = 'none'; render(); return; }
+      if (inField) e.target.blur();
+      return;
+    }
+
+    // While typing in the add-task input: 1/2/3/4 switches the quadrant select
+    if (inField && e.target === taskInput && /^[1-4]$/.test(e.key) && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const map = { '1': '1. Do now', '2': '2. Schedule', '3': '3. Delegate', '4': '4. Drop' };
+      document.getElementById('quadrant-select').value = map[e.key];
+      return;
+    }
+
+    if (inField) return;
+
+    if (e.key === 'n' || e.key === 'N') { e.preventDefault(); taskInput.focus(); return; }
+    if (e.key === '/') { e.preventDefault(); filterInput.focus(); return; }
+    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); loadTasks(); return; }
+    if (e.key === '?') { e.preventDefault(); shortcutsBackdrop.classList.add('open'); return; }
+  });
+
+  // ---------- Boot: hydrate from IDB, then fetch network ----------
+  updateOnlineIndicator();
+  (async () => {
+    // Restore cached state so the app shows something useful even before the network responds
+    try {
+      const [cachedTasks, cachedQueue, cachedIdMap] = await Promise.all([
+        idbGet('tasks'),
+        idbGet('queue'),
+        idbGet('idMap')
+      ]);
+      if (Array.isArray(cachedTasks)) {
+        tasks = cachedTasks;
+      }
+      if (Array.isArray(cachedQueue)) {
+        cachedQueue.forEach(job => syncQueue.push(job));
+        updateQueueIndicator();
+      }
+      if (cachedIdMap && typeof cachedIdMap === 'object') {
+        Object.assign(idMap, cachedIdMap);
+      }
+    } catch (e) { /* ignore */ }
+
+    render();
+
+    if (!API_URL) { setStatus('Paste your API URL above', ''); return; }
+
+    // If we came back online and have queued work, drain it before re-fetching.
+    if (isOnline && syncQueue.length > 0) {
+      await processQueue();
+    }
+    if (isOnline) {
+      await loadTasks();
+    } else {
+      setStatus('Offline · showing cached tasks', 'error');
+    }
+  })();
+})();
+
+// ---------- Service worker registration (PWA installability) ----------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('Service worker registration failed:', err);
+    });
+  });
+}
+</script>
+</body>
+</html>
